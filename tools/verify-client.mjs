@@ -37,8 +37,13 @@ const reactStub = {
   useSyncExternalStore: (subscribe, getSnapshot) => getSnapshot(),
   Fragment: Symbol('Fragment'),
 }
+const reactDomStub = {
+  // 面板 portal 到 document.body；桩里直接返回节点即可（本校验不渲染组件树）
+  createPortal: (node) => node,
+}
 const requireStub = (id) => {
   if (id === 'react') return reactStub
+  if (id === 'react-dom') return reactDomStub
   throw new Error(`unexpected require(${JSON.stringify(id)})`)
 }
 
