@@ -126,9 +126,9 @@ dsh plugin --profile web add <本插件包路径或包名>
 
 ---
 
-## 🔧 本 fork 的改动（cacads，1.0.4 → 1.0.5）
+## 🔧 本 fork 的改动（cacads，1.0.4 → 1.0.6）
 
-> 本仓库是 [dbaks/dsh-everything-search](https://github.com/dbaks/dsh-everything-search) 的 fork，用于修复上游 1.0.3 在 **DSH 0.2.0-rc.2** 上的两个缺陷：**① UI 完全不出现（静默）**、**② 搜索面板贴在屏幕底部正中（没跟输入框对齐）**。宿主半端的 `everything_search` 工具两版都正常。
+> 本仓库是 [dbaks/dsh-everything-search](https://github.com/dbaks/dsh-everything-search) 的 fork，用于修复上游 1.0.3 在 **DSH 0.2.0-rc.2** 上的两个缺陷：**① UI 完全不出现（静默）**、**② 搜索面板位置不对**。宿主半端的 `everything_search` 工具各版本都正常。
 
 ### 1.0.4 —— 客户端半端**静默不挂载**
 
@@ -144,13 +144,27 @@ dsh plugin --profile web add <本插件包路径或包名>
 | `lib/client.js` → 导出 `inject` | `[]` | `['slots']` |
 | `lib/client.js` → 服务缺失分支 | `if (slots === undefined) return`（静默） | 同名判断 + `console.warn(...)`，**不再无声** |
 
-### 1.0.5 —— 搜索面板**贴屏幕底部正中**
+### 1.0.5 —— 搜索面板**贴屏幕底部正中**（已被 1.0.6 取代）
 
 **症状**：按钮位置正确，但点开后搜索面板横在**屏幕底部正中**，没和输入框对齐。
 
 **根因**：面板原先注册在 `shell.overlay`（全局浮层，需自己定位），靠 `document.querySelector('textarea')` 量输入框的 `left/width`；而 **0.2.0-rc.2 的输入框已不是 `<textarea>`，是 Lexical 的 `contenteditable`**（`ComposerContentEditable`）→ 量不到 → 走兜底样式 `left:50%; transform:translateX(-50%)` + `bottom:0` = 屏幕底部正中。
 
-**修法（官方坐席，不再手量）**：面板改装到 **`conversation.input.dock`**——`@deepseek-ai/dsh-client-ui-conversation` 的类型契约原文：*"Full-width entries above the composer card."*（`kind: list`，owner `InputZone`）。同时删除 `measureComposer()` / `geom` 状态 / `modalStyle` 兜底 / 全屏 backdrop 与 `.evs-modal` 定位 CSS，改为普通 `.evs-dock` 卡片。
+**当时的修法**：面板改装到 `conversation.input.dock`（*"Full-width entries above the composer card."*），删除 `measureComposer()` / `geom` / `modalStyle` 兜底，改为整宽 `.evs-dock` 卡片。**该形态随后被用户否掉，见 1.0.6。**
+
+### 1.0.6 —— 按 `dsh-github-connect` 的写法重写客户端形态（当前版本）
+
+**触发**：用户指出本机同版本就有一个活参考——`dsh-github-connect`（同一 0.2.0-rc.2、同样的「composer 按钮 + 面板」需求）。于是**照抄它**，而不是继续自己拼方案：
+
+| 维度 | `dsh-github-connect` 的写法 | 本插件 1.0.6 |
+| --- | --- | --- |
+| 按钮坐席 | `conversation.input.left` | 同 |
+| 面板坐席 | **`conversation.input.overlay`**（契约：*Floating entries rendered inside the resident composer card*） | 由 1.0.5 的 `input.dock` 改为 `input.overlay` |
+| 开合状态 | 会话级 `openSessionId` + `listeners` + `React.useSyncExternalStore` 的 `useOpenSession()` | 逐字照搬 |
+| 面板外观 | `.ghc-backdrop`（`position:fixed; inset:0; z-index:200; rgba(0,0,0,.45)` + flex 居中）+ 定宽卡片 | `.evs-backdrop` / `.evs-modal`（760px，`max-height: min(88vh,800px)`）——**居中由设计决定，不再量输入框** |
+| 关闭方式 | 点遮罩空白（`event.target === event.currentTarget`）/ ✕ / 再点按钮收起 | 三种全有，按钮加 `.evs-open` 开态高亮 |
+| 注册规格 | `{ name, id, order, label: () => '…' }` | 两个座位补 `order` 与函数式 `label` |
+| 导出 | `module.exports = { name, inject: ['slots'], apply }` | 补 `exports.name` |
 
 **可复跑的验证**（不需要浏览器、不联网）：
 
@@ -159,7 +173,7 @@ node tools/verify-client.mjs                                                    
 node tools/verify-client.mjs <profile>/node_modules/dsh-everything-search/lib/client.js
 ```
 
-三条断言：① 导出 `inject` 必须含 `slots`；② `apply()` 必须注册 `conversation.input.left`（按钮）/ `conversation.input.dock`（面板）/ `settings.section`（设置页）三个座位；③ 服务缺失时必须 warn。1.0.3 实测 **1/3**（复现静默失败），1.0.4 / 1.0.5 实测 **3/3**。
+三条断言：① 导出 `inject` 必须含 `slots`；② `apply()` 必须注册 `conversation.input.left`（按钮）/ `conversation.input.overlay`（面板）/ `settings.section`（设置页）三个座位；③ 服务缺失时必须 warn。1.0.3 实测 **1/3**（复现静默失败），1.0.4 起实测 **3/3**。
 
 ---
 
