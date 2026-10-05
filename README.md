@@ -177,6 +177,22 @@ dsh plugin --profile web add <本插件包路径或包名>
 
 > 💡 **结论**：在 composer 子树里做**全屏浮层**必须 portal 到 `document.body`；`position:fixed` 不等于视口定位，祖先的 `transform` / `filter` / `backdrop-filter` / `will-change` / `contain`（含 `container-type`）都会换包含块。
 
+### 1.0.8 —— 按钮与邻居对齐（鼠标反馈 + 图标尺寸）
+
+**症状**：输入区工具行里的 🔍 与旁边的 `dsh-github-connect` 按钮**手感与体量都不一致**——鼠标悬停没有它们那种反馈，图标也大一圈。
+
+**修法（1:1 照抄 `.ghc-trigger`）**：
+
+| 维度 | `dsh-github-connect` `.ghc-trigger` | 本插件 1.0.7 及以前 | 本插件 1.0.8 |
+| --- | --- | --- | --- |
+| 盒形 | `height:28px; border-radius:14px`（胶囊）+ `border:1px solid var(--dsw-alias-border-l1)` | 无边框方块 `padding:5px 7px; border-radius:8px` | 与参考一致 |
+| 文字色 | `var(--dsw-alias-label-secondary)`（悬停转 `label-primary`） | 恒为 `label-primary` | 与参考一致 |
+| 悬停 | `:hover{background:bg-layer-2; color:label-primary}` | 只改背景、不改文字色 | 与参考一致 |
+| 键盘焦点 | `:focus-visible{outline:2px solid brand; outline-offset:1px}` | 无 | 与参考一致 |
+| 过渡 | `transition: background 120ms ease, color 120ms ease, border-color 120ms ease` | 无 | 与参考一致 |
+| 展开态 | `.ghc-open{border-color:brand; color:label-primary}` | 背景块 + 品牌色文字 | `.evs-open` 同参考 |
+| 图标 | `.ghc-icon{width:14px;height:14px;flex:none}` | 内联 `width/height=18` | `.evs-icon` 14px，`flex:none` |
+
 **可复跑的验证**（不需要浏览器、不联网）：
 
 ```bash
