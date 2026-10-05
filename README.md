@@ -152,7 +152,7 @@ dsh plugin --profile web add <本插件包路径或包名>
 
 **当时的修法**：面板改装到 `conversation.input.dock`（*"Full-width entries above the composer card."*），删除 `measureComposer()` / `geom` / `modalStyle` 兜底，改为整宽 `.evs-dock` 卡片。**该形态随后被用户否掉，见 1.0.6。**
 
-### 1.0.6 —— 按 `dsh-github-connect` 的写法重写客户端形态（当前版本）
+### 1.0.6 —— 按 `dsh-github-connect` 的写法重写客户端形态
 
 **触发**：用户指出本机同版本就有一个活参考——`dsh-github-connect`（同一 0.2.0-rc.2、同样的「composer 按钮 + 面板」需求）。于是**照抄它**，而不是继续自己拼方案：
 
@@ -165,6 +165,17 @@ dsh plugin --profile web add <本插件包路径或包名>
 | 关闭方式 | 点遮罩空白（`event.target === event.currentTarget`）/ ✕ / 再点按钮收起 | 三种全有，按钮加 `.evs-open` 开态高亮 |
 | 注册规格 | `{ name, id, order, label: () => '…' }` | 两个座位补 `order` 与函数式 `label` |
 | 导出 | `module.exports = { name, inject: ['slots'], apply }` | 补 `exports.name` |
+
+### 1.0.7 —— 对话框「水平居中却贴在屏幕最下面」→ portal 到 `document.body`（当前版本）
+
+**症状**：1.0.6 之后水平方向居中正确，但垂直方向**贴在屏幕底部**。
+
+**根因**：`conversation.input.overlay` 的宿主并不在页面顶层——`@deepseek-ai/dsh-client-ui-conversation` 的 `InputBar` 把它渲染为
+`.uV2eYG_overlayAnchor{ height:0; position:absolute; inset:0 0 auto }`（输入框卡片顶部的零高度锚点）。在这棵子树里，祖先的 **containment / transform 类属性会改写 `position:fixed` 的包含块**（同包内就有 `.uV2eYG_row{ container-type:inline-size }` 这类 containment），于是 `position:fixed; inset:0` 的遮罩只撑满那一小块锚点，flex 居中就把卡片放到了锚点处 = 屏幕底部。
+
+**修法（照本机 `dsh-context` 的附件灯箱）**：`require('react-dom')` + `ReactDOM.createPortal(<遮罩+卡片>, document.body)`；遮罩改用官方变量 `--dsw-alias-bg-mask-1`、`z-index:1000`。`react-dom` 属**平台基础模块**，无需在 `dsh.client.external` 里声明（`dsh-context` 就是这么用的）。
+
+> 💡 **结论**：在 composer 子树里做**全屏浮层**必须 portal 到 `document.body`；`position:fixed` 不等于视口定位，祖先的 `transform` / `filter` / `backdrop-filter` / `will-change` / `contain`（含 `container-type`）都会换包含块。
 
 **可复跑的验证**（不需要浏览器、不联网）：
 
