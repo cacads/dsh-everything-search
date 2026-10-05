@@ -34,6 +34,7 @@ const reactStub = {
   useState: (initial) => [initial, () => {}],
   useEffect: () => {},
   useRef: (v) => ({ current: v }),
+  useSyncExternalStore: (subscribe, getSnapshot) => getSnapshot(),
   Fragment: Symbol('Fragment'),
 }
 const requireStub = (id) => {
@@ -88,7 +89,7 @@ const live = makeCtx('stub')
 let threw = null
 try { mod.apply(live.ctx) } catch (err) { threw = err }
 const seats = live.registered.filter((r) => r.kind === 'register').map((r) => r.name).sort()
-const expected = ['conversation.input.dock', 'conversation.input.left', 'settings.section']
+const expected = ['conversation.input.left', 'conversation.input.overlay', 'settings.section']
 check(
   'apply() 注册三个 UI 座位',
   threw === null && JSON.stringify(seats) === JSON.stringify(expected),
