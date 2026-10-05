@@ -126,21 +126,31 @@ dsh plugin --profile web add <本插件包路径或包名>
 
 ---
 
-## 🔧 本 fork 的改动（cacads，1.0.4）
+## 🔧 本 fork 的改动（cacads，1.0.4 → 1.0.5）
 
-> 本仓库是 [dbaks/dsh-everything-search](https://github.com/dbaks/dsh-everything-search) 的 fork，用于修复上游 1.0.3 在 **DSH 0.2.0-rc.2** 上的一个**静默失败**：🔍 按钮与「Everything 搜索」设置页**一个都不出现，且没有任何报错**（宿主半端的 `everything_search` 工具照常可用）。
+> 本仓库是 [dbaks/dsh-everything-search](https://github.com/dbaks/dsh-everything-search) 的 fork，用于修复上游 1.0.3 在 **DSH 0.2.0-rc.2** 上的两个缺陷：**① UI 完全不出现（静默）**、**② 搜索面板贴在屏幕底部正中（没跟输入框对齐）**。宿主半端的 `everything_search` 工具两版都正常。
+
+### 1.0.4 —— 客户端半端**静默不挂载**
+
+**症状**：🔍 按钮与「Everything 搜索」设置页**一个都不出现，且没有任何报错**。
 
 **根因**：客户端半端既没在 `package.json` 的 `dsh.client.inject` 里，也没在自己的 `exports.inject` 里声明 `slots`，于是浏览器侧会在 `@deepseek-ai/dsh-client-ui-slots` 之前 materialize；`apply()` 里 `ctx.get('slots')` 拿到 `undefined` 后**直接 return**。官方文档 `docs/subsystems/client-modules.md` 的原话：
 
 > `inject` names package rows whose factories must arrive before this row materializes, while Cordis separately uses the same package edges to compose entries.
-
-**改动（两文件三处）**：
 
 | 文件 | 1.0.3 | 1.0.4 |
 | --- | --- | --- |
 | `package.json` → `dsh.client.inject` | `[]` | `["@deepseek-ai/dsh-client-ui-slots", "@deepseek-ai/dsh-client-ui-conversation"]` |
 | `lib/client.js` → 导出 `inject` | `[]` | `['slots']` |
 | `lib/client.js` → 服务缺失分支 | `if (slots === undefined) return`（静默） | 同名判断 + `console.warn(...)`，**不再无声** |
+
+### 1.0.5 —— 搜索面板**贴屏幕底部正中**
+
+**症状**：按钮位置正确，但点开后搜索面板横在**屏幕底部正中**，没和输入框对齐。
+
+**根因**：面板原先注册在 `shell.overlay`（全局浮层，需自己定位），靠 `document.querySelector('textarea')` 量输入框的 `left/width`；而 **0.2.0-rc.2 的输入框已不是 `<textarea>`，是 Lexical 的 `contenteditable`**（`ComposerContentEditable`）→ 量不到 → 走兜底样式 `left:50%; transform:translateX(-50%)` + `bottom:0` = 屏幕底部正中。
+
+**修法（官方坐席，不再手量）**：面板改装到 **`conversation.input.dock`**——`@deepseek-ai/dsh-client-ui-conversation` 的类型契约原文：*"Full-width entries above the composer card."*（`kind: list`，owner `InputZone`）。同时删除 `measureComposer()` / `geom` 状态 / `modalStyle` 兜底 / 全屏 backdrop 与 `.evs-modal` 定位 CSS，改为普通 `.evs-dock` 卡片。
 
 **可复跑的验证**（不需要浏览器、不联网）：
 
@@ -149,7 +159,7 @@ node tools/verify-client.mjs                                                    
 node tools/verify-client.mjs <profile>/node_modules/dsh-everything-search/lib/client.js
 ```
 
-三条断言：① 导出 `inject` 必须含 `slots`；② `apply()` 必须注册 `conversation.input.left` / `shell.overlay` / `settings.section` 三个座位；③ 服务缺失时必须 warn。1.0.3 实测 **1/3**（复现静默失败），1.0.4 实测 **3/3**。
+三条断言：① 导出 `inject` 必须含 `slots`；② `apply()` 必须注册 `conversation.input.left`（按钮）/ `conversation.input.dock`（面板）/ `settings.section`（设置页）三个座位；③ 服务缺失时必须 warn。1.0.3 实测 **1/3**（复现静默失败），1.0.4 / 1.0.5 实测 **3/3**。
 
 ---
 

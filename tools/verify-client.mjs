@@ -11,7 +11,7 @@
 //
 // 三条断言：
 //   1) 客户端导出的 `inject` 必须声明 `slots`（Cordis 靠它等插槽服务就绪）；
-//   2) `apply()` 必须注册全部三个 UI 座位（conversation.input.left / shell.overlay / settings.section）；
+//   2) `apply()` 必须注册全部三个 UI 座位（conversation.input.left 按钮 / conversation.input.dock 面板 / settings.section 设置页）；
 //   3) 服务缺失时必须**出声**（console.warn），不得静默 return。
 
 import { readFileSync } from 'node:fs'
@@ -88,7 +88,7 @@ const live = makeCtx('stub')
 let threw = null
 try { mod.apply(live.ctx) } catch (err) { threw = err }
 const seats = live.registered.filter((r) => r.kind === 'register').map((r) => r.name).sort()
-const expected = ['conversation.input.left', 'settings.section', 'shell.overlay']
+const expected = ['conversation.input.dock', 'conversation.input.left', 'settings.section']
 check(
   'apply() 注册三个 UI 座位',
   threw === null && JSON.stringify(seats) === JSON.stringify(expected),
